@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MaletFit Frontend 🏋️‍♂️💪
 
-## Getting Started
+Frontend desarrollado para la plataforma **MaletFit**, construido con Next.js (App Router), TypeScript y estilizado con Tailwind CSS y componentes de Shadcn UI.
 
-First, run the development server:
+---
+
+## 🚀 Tecnologías y Herramientas
+
+- **Framework:** [Next.js](https://nextjs.org/) (App Router)
+- **Lenguaje:** [TypeScript](https://www.typescriptlang.org/)
+- **Estilos:** [Tailwind CSS v4](https://tailwindcss.com/)
+- **Componentes:** [Shadcn UI](https://ui.shadcn.com/)
+- **Cliente HTTP:** [Axios](https://axios-http.com/)
+- **Manejo de Cookies:** `js-cookie`
+
+---
+
+## 📂 Estructura del Proyecto
+
+```text
+maletfit-frontend/
+├── api/              # Configuración y llamadas a la API
+├── app/              # Rutas y páginas (App Router)
+│   ├── globals.css   # Estilos globales y tokens de diseño
+│   ├── layout.tsx    # Layout principal de la app
+│   └── page.tsx      # Página de inicio / pruebas
+├── components/       # Componentes reutilizables
+│   └── ui/           # Componentes base de Shadcn UI
+├── context/          # Context API de React
+├── lib/              # Utilidades generales
+├── services/         # Capa de servicios y configuración de Axios
+└── types/            # Definiciones de tipos e interfaces TypeScript
+```
+
+---
+
+## ⚙️ Configuración y Ejecución Local
+
+### 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/tu-usuario/maletfit-frontend.git
+cd maletfit-frontend
+```
+
+### 2. Instalar dependencias
+
+```bash
+npm install
+```
+
+### 3. Configurar variables de entorno
+
+Creá un archivo `.env.local` en la raíz del proyecto basándote en el ejemplo:
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:3000
+```
+
+### 4. Ejecutar en desarrollo
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La aplicación estará disponible en `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠️ Capa de Servicios (`services/api.ts`)
 
-## Learn More
+El cliente HTTP está configurado de forma centralizada utilizando Axios con:
 
-To learn more about Next.js, take a look at the following resources:
+- **Base URL** obtenida de las variables de entorno.
+- **Interceptor de Request:** Inyecta automáticamente el token de autenticación (Bearer) almacenado en las cookies.
+- **Interceptor de Response:** Maneja de forma global los errores de autenticación (`401`), eliminando credenciales inválidas y redirigiendo al login.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 👩‍💻 Autora
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Macarena Aliberti** — _Desarrollo Full Stack_
+- **GitHub:** [@MacarenaAliberti-web](https://github.com/MacarenaAliberti-web)
+- **LinkedIn:** https://www.linkedin.com/in/macarena-aliberti-440b03373/
