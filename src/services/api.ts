@@ -1,6 +1,5 @@
 // services/api.ts
 import axios from 'axios';
-import Cookies from 'js-cookie';
 
 export const api = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
@@ -10,26 +9,17 @@ export const api = axios.create({
     },
 });
 
-api.interceptors.request.use(
-    (config) => {
-        const token = Cookies.get('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => Promise.reject(error)
-);
-
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
-            Cookies.remove('token');
-            if (typeof window !== 'undefined') {
-                // Evita el linter utilizando asignación directa controlada
+            // Si el 401 viene de verificar el usuario actual (/users/me), es normal si no estamos logueados. 
+            // No debemos forzar una recarga en bucle.
+            const isCheckingAuth = error.config?.url?.includes('/users/me');
+
+            if (!isCheckingAuth && typeof window !== 'undefined') {
                 // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-                window.location.assign('/login');
+                window.location.assign('/auth/login');
             }
         }
         return Promise.reject(error);
