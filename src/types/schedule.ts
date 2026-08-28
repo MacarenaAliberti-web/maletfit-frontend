@@ -1,11 +1,5 @@
 // src/types/schedule.ts
-
-export interface ClassType {
-    id: string;
-    name: string;
-    description: string | null;
-    durationMin: number;
-}
+import type { ClassType } from "./class-type";
 
 export interface Instructor {
     id: string;
@@ -19,14 +13,14 @@ export interface Instructor {
 
 export interface Schedule {
     id: string;
-    startTime: string; // ISO string, tal como charlamos — no es un objeto Date
+    startTime: string;
     endTime: string;
     capacity: number;
     status: string;
     classType: ClassType;
     instructor: Instructor;
     _count: {
-        bookings: number; // cantidad de reservas CONFIRMED — así lo devuelve tu findAll()
+        bookings: number;
     };
 }
 
@@ -37,3 +31,5 @@ export interface ScheduleAvailability {
     availableSeats: number;
     isFull: boolean;
 }
+
+export type { ClassType };

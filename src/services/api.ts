@@ -19,7 +19,7 @@ api.interceptors.response.use(
 
             if (!isCheckingAuth && typeof window !== 'undefined') {
                 // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-                window.location.assign('/auth/login');
+                window.location.assign('/login');
             }
         }
         return Promise.reject(error);
