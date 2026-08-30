@@ -14,3 +14,11 @@ export interface Routine {
     notes: string | null;
     exercises: RoutineExercise[];
 }
+
+export interface RoutineWithStudent extends Routine {
+    user: {
+        id: string;
+        fullName: string;
+        email: string;
+    };
+}

@@ -1,126 +1,137 @@
-// components/dashboard/dashboard-view.tsx
+// src/components/dashboard/student-view.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { CalendarCheck, LayoutGrid } from "lucide-react";
-import { useAuth } from "@/context/auth-context";
-import { AvailableClasses } from "@/components/available-classes";
-import { MyReservations } from "@/components/my-reservations";
-import { type GymClass } from "@/lib/gym-data";
+import { useEffect, useState } from "react";
+import { CalendarCheck, LayoutGrid, Dumbbell } from "lucide-react";
+import { schedulesService } from "@/services/schedules.service";
+import { bookingsService } from "@/services/bookings.service";
+import { routinesService } from "@/services/routines.service";
+import { getApiErrorMessage } from "@/lib/get-api-error-message";
+import { ActiveClassesList } from "./student/active-classes-list";
+import { MyBookingsList } from "./student/my-bookings-list";
+import { MyRoutinesList } from "./student/my-routines-list";
+import type { Schedule } from "@/types/schedule";
+import type { Booking } from "@/types/booking";
+import type { Routine } from "@/types/routine";
 
-type Tab = "clases" | "reservas";
+type Tab = "clases" | "reservas" | "rutinas";
 
-export default function StudentDashboardPage() {
-  const { user } = useAuth();
-  const [classes, setClasses] = useState<GymClass[]>([]);
-  const [reservedIds, setReservedIds] = useState<string[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+export default function StudentDashboardView() {
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("clases");
 
-  // 1. Cargar las clases (schedules) y las reservas del usuario al iniciar
+  const [reservingScheduleId, setReservingScheduleId] = useState<string | null>(
+    null,
+  );
+  const [reserveError, setReserveError] = useState<string | null>(null);
+
+  const [cancelingBookingId, setCancelingBookingId] = useState<string | null>(
+    null,
+  );
+
   useEffect(() => {
-    async function fetchData() {
+    let ignore = false;
+
+    async function loadData() {
       try {
-        setLoading(true);
-
-        // Petición a tus endpoints reales de Swagger
-        const [classesRes, bookingsRes] = await Promise.all([
-          fetch("http://localhost:3000/api/schedules", {
-            credentials: "include",
-          }),
-          fetch("http://localhost:3000/api/bookings/my-bookings", {
-            credentials: "include",
-          }),
+        const [schedulesData, bookingsData, routinesData] = await Promise.all([
+          schedulesService.getAll(),
+          bookingsService.getMyBookings(),
+          routinesService.getMyRoutines(),
         ]);
-
-        if (classesRes.ok) {
-          const classesData = await classesRes.json();
-          setClasses(classesData);
+        if (!ignore) {
+          setSchedules(schedulesData);
+          setBookings(bookingsData);
+          setRoutines(routinesData);
         }
-
-        if (bookingsRes.ok) {
-          const bookingsData = await bookingsRes.json();
-          // Suponiendo que la respuesta trae un array de reservas que contienen el id de la clase
-          const bookedClassIds = bookingsData.map(
-            (b: any) => b.scheduleId || b.id,
+      } catch {
+        if (!ignore) {
+          setLoadError(
+            "No se pudieron cargar los datos. Probá recargar la página.",
           );
-          setReservedIds(bookedClassIds);
         }
-      } catch (error) {
-        console.error("Error al sincronizar con el backend:", error);
       } finally {
-        setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     }
 
-    fetchData();
+    loadData();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  const reservations = useMemo(
-    () => classes.filter((c) => reservedIds.includes(c.id)),
-    [classes, reservedIds],
-  );
+  // No incluye routines a propósito: las rutinas no cambian al reservar
+  // o cancelar una clase, así que refetchearlas acá sería innecesario.
+  async function refreshData() {
+    const [schedulesData, bookingsData] = await Promise.all([
+      schedulesService.getAll(),
+      bookingsService.getMyBookings(),
+    ]);
+    setSchedules(schedulesData);
+    setBookings(bookingsData);
+  }
 
-  // 2. Manejar la reserva llamando a POST /bookings
-  async function handleReserve(id: string) {
+  async function handleReserve(scheduleId: string) {
+    setReserveError(null);
+    setReservingScheduleId(scheduleId);
     try {
-      const response = await fetch("http://localhost:3000/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ scheduleId: id }), // Ajustá la propiedad según lo que pida tu backend
-      });
-
-      if (!response.ok) throw new Error("No se pudo concretar la reserva");
-
-      setReservedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-      setClasses((prev) =>
-        prev.map((c) =>
-          c.id === id
-            ? { ...c, booked: Math.min(c.capacity, c.booked + 1) }
-            : c,
-        ),
+      await bookingsService.create(scheduleId);
+      await refreshData();
+    } catch (error: unknown) {
+      setReserveError(
+        getApiErrorMessage(error, "No se pudo completar la reserva."),
       );
-    } catch (error) {
-      console.error("Error al reservar turno:", error);
+    } finally {
+      setReservingScheduleId(null);
     }
   }
 
-  // 3. Manejar la cancelación llamando a PATCH /bookings/{id}/cancel
-  async function handleCancel(id: string) {
+  async function handleCancel(bookingId: string) {
+    setCancelingBookingId(bookingId);
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/bookings/${id}/cancel`,
-        {
-          method: "PATCH",
-          credentials: "include",
-        },
+      await bookingsService.cancel(bookingId);
+      await refreshData();
+    } catch (error: unknown) {
+      setReserveError(
+        getApiErrorMessage(error, "No se pudo cancelar la reserva."),
       );
-
-      if (!response.ok) throw new Error("No se pudo cancelar la reserva");
-
-      setReservedIds((prev) => prev.filter((x) => x !== id));
-      setClasses((prev) =>
-        prev.map((c) =>
-          c.id === id ? { ...c, booked: Math.max(0, c.booked - 1) } : c,
-        ),
-      );
-    } catch (error) {
-      console.error("Error al cancelar el turno:", error);
+    } finally {
+      setCancelingBookingId(null);
     }
   }
+
+  const activeBookingsCount = bookings.filter(
+    (b) => b.status === "CONFIRMED" || b.status === "WAITLIST",
+  ).length;
 
   const tabs: { key: Tab; label: string; icon: typeof LayoutGrid }[] = [
     { key: "clases", label: "Clases", icon: LayoutGrid },
     { key: "reservas", label: "Mis reservas", icon: CalendarCheck },
+    { key: "rutinas", label: "Mis rutinas", icon: Dumbbell },
   ];
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-muted-foreground animate-pulse text-lg">
-          Cargando clases desde el servidor...
+          Cargando clases...
         </p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-red-500">{loadError}</p>
       </div>
     );
   }
@@ -134,7 +145,7 @@ export default function StudentDashboardPage() {
         >
           {tabs.map(({ key, label, icon: Icon }) => {
             const active = tab === key;
-            const count = key === "reservas" ? reservations.length : 0;
+            const count = key === "reservas" ? activeBookingsCount : 0;
             return (
               <button
                 key={key}
@@ -165,14 +176,27 @@ export default function StudentDashboardPage() {
           })}
         </nav>
 
+        {reserveError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-500">
+            {reserveError}
+          </div>
+        )}
+
         {tab === "clases" ? (
-          <AvailableClasses
-            classes={classes}
-            reservedIds={reservedIds}
+          <ActiveClassesList
+            schedules={schedules}
+            bookings={bookings}
+            reservingScheduleId={reservingScheduleId}
             onReserve={handleReserve}
           />
+        ) : tab === "reservas" ? (
+          <MyBookingsList
+            bookings={bookings}
+            cancelingBookingId={cancelingBookingId}
+            onCancel={handleCancel}
+          />
         ) : (
-          <MyReservations reservations={reservations} onCancel={handleCancel} />
+          <MyRoutinesList routines={routines} />
         )}
       </main>
     </div>

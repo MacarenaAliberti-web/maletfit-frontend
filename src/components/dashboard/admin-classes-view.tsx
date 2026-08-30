@@ -1,9 +1,9 @@
 // src/components/dashboard/admin-classes-view.tsx
 "use client";
 
+import { getApiErrorMessage } from "@/lib/get-api-error-message";
 import { useEffect, useState } from "react";
 import { Plus, Calendar, Clock, Users, Tag, Dumbbell } from "lucide-react";
-import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,17 +13,6 @@ import { instructorsService } from "@/services/instructors.service";
 import type { Schedule } from "@/types/schedule";
 import type { ClassType } from "@/types/class-type";
 import type { InstructorWithUser } from "@/types/instructor";
-
-function getApiErrorMessage(error: unknown, fallback: string): string {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data as
-      | { message?: string | string[] }
-      | undefined;
-    const msg = data?.message;
-    return Array.isArray(msg) ? msg.join(", ") : (msg ?? fallback);
-  }
-  return fallback;
-}
 
 export default function AdminClassesView() {
   const [activeTab, setActiveTab] = useState<"schedules" | "class-types">(
