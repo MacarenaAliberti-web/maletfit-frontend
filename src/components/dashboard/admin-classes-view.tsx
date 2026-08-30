@@ -1,27 +1,54 @@
 // src/components/dashboard/admin-classes-view.tsx
 "use client";
 
-import { getApiErrorMessage } from "@/lib/get-api-error-message";
-import { useEffect, useState } from "react";
-import { Plus, Calendar, Clock, Users, Tag, Dumbbell } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Plus,
+  Calendar,
+  Clock,
+  Users,
+  Tag,
+  Dumbbell,
+  UserCog,
+} from "lucide-react";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { schedulesService } from "@/services/schedules.service";
 import { classTypesService } from "@/services/class-types.service";
 import { instructorsService } from "@/services/instructors.service";
+import { routinesService } from "@/services/routines.service";
+import { CreateRoutineForm } from "./shared/create-routine-form";
+import { EditRoutineForm } from "./shared/edit-routine-form";
+import { AssignedRoutinesList } from "./shared/assigned-routines-list";
+import { ScheduleRoster } from "./shared/schedule-roster";
+import { ManageUsersList } from "./admin/manage-users-list";
 import type { Schedule } from "@/types/schedule";
 import type { ClassType } from "@/types/class-type";
 import type { InstructorWithUser } from "@/types/instructor";
+import type { RoutineWithStudent } from "@/types/routine";
+
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as
+      | { message?: string | string[] }
+      | undefined;
+    const msg = data?.message;
+    return Array.isArray(msg) ? msg.join(", ") : (msg ?? fallback);
+  }
+  return fallback;
+}
+
+type Tab = "schedules" | "class-types" | "routines" | "users";
 
 export default function AdminClassesView() {
-  const [activeTab, setActiveTab] = useState<"schedules" | "class-types">(
-    "schedules",
-  );
+  const [activeTab, setActiveTab] = useState<Tab>("schedules");
 
   const [classes, setClasses] = useState<Schedule[]>([]);
   const [instructors, setInstructors] = useState<InstructorWithUser[]>([]);
   const [classTypes, setClassTypes] = useState<ClassType[]>([]);
+  const [routines, setRoutines] = useState<RoutineWithStudent[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Estados del formulario de Clases (Schedules)
@@ -39,6 +66,11 @@ export default function AdminClassesView() {
   const [typeFormError, setTypeFormError] = useState<string | null>(null);
   const [typeFormSuccess, setTypeFormSuccess] = useState<string | null>(null);
 
+  // Estado de Rutinas (crear/editar), mismo patrón que en InstructorDashboardView
+  const [editingRoutine, setEditingRoutine] =
+    useState<RoutineWithStudent | null>(null);
+  const routineFormRef = useRef<HTMLDivElement>(null);
+
   // Carga inicial: usa el patrón "ignore" para evitar setState sobre un
   // componente ya desmontado (o pisar datos nuevos con una respuesta vieja
   // si el efecto llegara a re-ejecutarse antes de que termine el fetch).
@@ -47,11 +79,12 @@ export default function AdminClassesView() {
 
     async function loadInitialData() {
       try {
-        const [schedulesData, instructorsData, classTypesData] =
+        const [schedulesData, instructorsData, classTypesData, routinesData] =
           await Promise.all([
             schedulesService.getAll().catch(() => []),
             instructorsService.getAll().catch(() => []),
             classTypesService.getAll().catch(() => []),
+            routinesService.getAll().catch(() => []),
           ]);
 
         if (ignore) return;
@@ -59,6 +92,7 @@ export default function AdminClassesView() {
         setClasses(schedulesData);
         setInstructors(instructorsData);
         setClassTypes(classTypesData);
+        setRoutines(routinesData);
         setClassTypeId((prev) => prev || (classTypesData[0]?.id ?? ""));
       } catch (error) {
         if (!ignore) {
@@ -78,6 +112,17 @@ export default function AdminClassesView() {
     };
   }, []); // Solo corre una vez, al montar
 
+  // Al entrar en modo edición de una rutina, llevamos la vista hasta el
+  // formulario — mismo motivo que en InstructorDashboardView.
+  useEffect(() => {
+    if (editingRoutine) {
+      routineFormRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [editingRoutine]);
+
   // Refresco manual después de crear una clase o un tipo de clase.
   // No usa el patrón "ignore" porque se dispara en respuesta a una acción
   // del usuario (no en un efecto), así que no corre el mismo riesgo de
@@ -91,6 +136,24 @@ export default function AdminClassesView() {
     setClasses(schedulesData);
     setInstructors(instructorsData);
     setClassTypes(classTypesData);
+  }
+
+  async function refreshRoutines() {
+    const data = await routinesService.getAll();
+    setRoutines(data);
+  }
+
+  function handleEditRoutine(routine: RoutineWithStudent) {
+    setEditingRoutine(routine);
+  }
+
+  function handleCancelEdit() {
+    setEditingRoutine(null);
+  }
+
+  async function handleRoutineSaved() {
+    setEditingRoutine(null);
+    await refreshRoutines();
   }
 
   async function handleCreateClass(e: React.FormEvent) {
@@ -157,7 +220,7 @@ export default function AdminClassesView() {
             Panel de Administración
           </h1>
           <p className="text-sm text-muted-foreground">
-            Gestioná los horarios, clases y disciplinas del gimnasio.
+            Gestioná los horarios, clases, disciplinas y rutinas del gimnasio.
           </p>
         </div>
 
@@ -181,6 +244,26 @@ export default function AdminClassesView() {
             }`}
           >
             <Tag className="size-4" /> Tipos de Clases
+          </button>
+          <button
+            onClick={() => setActiveTab("routines")}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${
+              activeTab === "routines"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Dumbbell className="size-4" /> Rutinas
+          </button>
+          <button
+            onClick={() => setActiveTab("users")}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${
+              activeTab === "users"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <UserCog className="size-4" /> Usuarios
           </button>
         </div>
       </div>
@@ -313,7 +396,13 @@ export default function AdminClassesView() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="size-4 text-emerald-500" />
-                      <span>Cupo: {c.capacity} alumnos</span>
+                      <span>
+                        {c._count.bookings} / {c.capacity} anotados
+                      </span>
+                    </div>
+
+                    <div className="pt-2">
+                      <ScheduleRoster scheduleId={c.id} />
                     </div>
                   </CardContent>
                 </Card>
@@ -426,6 +515,33 @@ export default function AdminClassesView() {
           </div>
         </div>
       )}
+
+      {activeTab === "routines" && (
+        <div className="space-y-4">
+          <div ref={routineFormRef}>
+            {editingRoutine ? (
+              <EditRoutineForm
+                key={editingRoutine.id}
+                routine={editingRoutine}
+                onSaved={handleRoutineSaved}
+                onCancel={handleCancelEdit}
+              />
+            ) : (
+              <CreateRoutineForm onCreated={refreshRoutines} />
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">Rutinas Asignadas</h2>
+            <AssignedRoutinesList
+              routines={routines}
+              onEdit={handleEditRoutine}
+            />
+          </div>
+        </div>
+      )}
+
+      {activeTab === "users" && <ManageUsersList />}
     </div>
   );
 }
