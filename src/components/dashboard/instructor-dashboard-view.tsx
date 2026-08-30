@@ -8,11 +8,11 @@ import { schedulesService } from "@/services/schedules.service";
 import { routinesService } from "@/services/routines.service";
 import type { Schedule } from "@/types/schedule";
 import type { RoutineWithStudent } from "@/types/routine";
-import { ScheduleRoster } from "./instructor/schedule-roster";
+import { ScheduleRoster } from "./shared/schedule-roster";
 import { CreateScheduleForm } from "./instructor/create-schedule-form";
-import { CreateRoutineForm } from "./instructor/create-routine-form";
-import { EditRoutineForm } from "./instructor/edit-routine-form";
-import { AssignedRoutinesList } from "./instructor/assigned-routines-list";
+import { CreateRoutineForm } from "./shared/create-routine-form";
+import { EditRoutineForm } from "./shared/edit-routine-form";
+import { AssignedRoutinesList } from "./shared/assigned-routines-list";
 
 type Tab = "turnos" | "rutinas";
 
