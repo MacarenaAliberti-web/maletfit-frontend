@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authService.logout();
     } finally {
       setUser(null);
-      router.push("/auth/login"); // Redirige al login tras salir
+      router.push("/");
     }
   };
 

@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema } from "@/lib/validations/auth";
 import type { RegisterFormValues } from "@/lib/validations/auth";
+import { authService } from "@/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -35,12 +36,7 @@ export function RegisterForm() {
   async function onSubmit(values: RegisterFormValues) {
     setServerError(null);
     try {
-      // El backend devuelve la cookie seteada automáticamente y el usuario
-      await axios.post("http://localhost:3000/auth/register", values, {
-        withCredentials: true,
-      });
-
-      // Redirigimos al login o directo al dashboard según prefieras
+      await authService.register(values);
       router.push("/login");
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
