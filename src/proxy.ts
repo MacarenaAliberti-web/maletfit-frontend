@@ -1,7 +1,8 @@
+// src/proxy.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PROTECTED_ROUTES = ["/dashboard"];
+const PROTECTED_ROUTES = ["/admin", "/instructor", "/student"];
 const AUTH_ROUTES = ["/login", "/register"];
 
 export function proxy(request: NextRequest) {
@@ -13,14 +14,12 @@ export function proxy(request: NextRequest) {
     );
     const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
 
-    // Sin cookie, intentando entrar a una ruta protegida → afuera
     if (isProtectedRoute && !token) {
         const loginUrl = new URL("/login", request.url);
         loginUrl.searchParams.set("from", pathname);
         return NextResponse.redirect(loginUrl);
     }
 
-    // Con cookie, intentando entrar a login/register → ya está logueado, mandalo al dashboard
     if (isAuthRoute && token) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
     }
@@ -29,5 +28,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/dashboard/:path*", "/login", "/register"],
+    matcher: ["/admin/:path*", "/instructor/:path*", "/student/:path*", "/login", "/register"],
 };
