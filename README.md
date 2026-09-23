@@ -152,6 +152,13 @@ npm run dev
 
 ---
 
+## 📚 Documentación adicional
+
+- [`DEPLOYMENT.md`](./DEPLOYMENT.md) — cómo se desplegó a producción (Render + Vercel) y el problema de cookies cross-domain que hubo que resolver
+- [README del backend](https://github.com/MacarenaAliberti-web/maletfit-backend) — arquitectura, condiciones de carrera, testing y sistema de emails
+
+---
+
 ## 👩‍💻 Autora
 
 - **Macarena Aliberti** — _Desarrollo Full Stack_
